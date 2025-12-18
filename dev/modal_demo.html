@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Nody Modal MVP</title>
+  <style>
+    :root {
+      --bg: rgba(0,0,0,.55);
+      --panel: #141414;
+      --panel2: #1b1b1b;
+      --text: #f2f2f2;
+      --muted: rgba(255,255,255,.72);
+      --border: rgba(255,255,255,.12);
+      --radius: 16px;
+    }
+
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: #0e0e0e;
+      color: var(--text);
+      padding: 24px;
+    }
+
+    /* Demo button (outside Comfy) */
+    .demo-open {
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.08);
+      color: var(--text);
+      cursor: pointer;
+      transition: transform .08s ease, background .12s ease, border-color .12s ease;
+    }
+    .demo-open:hover {
+      transform: translateY(-1px);
+      background: rgba(255,255,255,.10);
+      border-color: rgba(255,255,255,.18);
+    }
+    .demo-open:active {
+      transform: translateY(0px) scale(0.98);
+    }
+
+    /* --- Modal --- */
+    .nody-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: none;           /* hidden by default */
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      z-index: 999999;
+    }
+
+    .nody-modal-backdrop[data-open="true"] {
+      display: flex;
+    }
+
+    .nody-modal {
+      width: min(920px, 100%);
+      height: min(520px, 100%);
+      background: linear-gradient(180deg, var(--panel), var(--panel2));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+    }
+
+    /* Left: image */
+    .nody-modal__left {
+      background: rgba(255,255,255,.04);
+      border-right: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+
+    .nody-modal__left img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.25);
+    }
+
+    /* Right: content */
+    .nody-modal__right {
+      position: relative;
+      padding: 18px 18px 72px; /* leave space for bottom buttons */
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .nody-modal__topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .nody-modal__title {
+      font-size: 20px;
+      font-weight: 700;
+      margin: 0;
+      letter-spacing: .2px;
+    }
+
+    /* Close button: tactile */
+    .nody-modal__close {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      cursor: pointer;
+      line-height: 32px;
+      font-size: 18px;
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.10),
+        0 8px 18px rgba(0,0,0,.28);
+      transition: transform .08s ease, background .12s ease, border-color .12s ease, box-shadow .12s ease;
+    }
+    .nody-modal__close:hover {
+      transform: translateY(-1px);
+      background: rgba(255,255,255,.09);
+      border-color: rgba(255,255,255,.26);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.14),
+        0 12px 24px rgba(0,0,0,.36);
+    }
+    .nody-modal__close:active {
+      transform: translateY(0px) scale(0.98);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.06),
+        0 6px 14px rgba(0,0,0,.22);
+    }
+    .nody-modal__close:focus-visible {
+      outline: none;
+      box-shadow:
+        0 0 0 3px rgba(255,255,255,.16),
+        inset 0 1px 0 rgba(255,255,255,.10),
+        0 12px 24px rgba(0,0,0,.36);
+    }
+
+    .nody-section h3 {
+      margin: 10px 0 6px;
+      font-size: 13px;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .nody-section p,
+    .nody-section ul {
+      margin: 0;
+      color: rgba(255,255,255,.85);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .nody-section ul {
+      padding-left: 18px;
+    }
+
+    /* Bottom-right buttons */
+    .nody-modal__actions {
+      position: absolute;
+      right: 18px;
+      bottom: 18px;
+      display: flex;
+      gap: 10px;
+    }
+
+    /* --- Buttons (TE-ish): secondary = outline, primary = filled --- */
+    .nody-btn {
+      padding: 10px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 650;
+      letter-spacing: .2px;
+      user-select: none;
+
+      border: 1px solid rgba(255,255,255,.20);
+      background: rgba(0,0,0,.15); /* cleaner/less “pill glow” */
+      color: rgba(255,255,255,.92);
+
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.10),
+        0 10px 18px rgba(0,0,0,.28);
+
+      transition:
+        transform .08s ease,
+        background .12s ease,
+        border-color .12s ease,
+        box-shadow .12s ease;
+    }
+
+    .nody-btn:hover {
+      transform: translateY(-1px);
+      background: rgba(0,0,0,.22);
+      border-color: rgba(255,255,255,.32);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.14),
+        0 14px 22px rgba(0,0,0,.36);
+    }
+
+    .nody-btn:active {
+      transform: translateY(0px) scale(0.98);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.06),
+        0 7px 14px rgba(0,0,0,.22);
+    }
+
+    .nody-btn:focus-visible {
+      outline: none;
+      box-shadow:
+        0 0 0 3px rgba(255,255,255,.16),
+        inset 0 1px 0 rgba(255,255,255,.12),
+        0 14px 22px rgba(0,0,0,.36);
+    }
+
+    .nody-btn--primary {
+      background: rgba(255,255,255,.18);      /* more filled */
+      border-color: rgba(255,255,255,.30);    /* crisper edge */
+      color: rgba(255,255,255,.98);
+    }
+
+    .nody-btn--primary:hover {
+      background: rgba(255,255,255,.24);
+      border-color: rgba(255,255,255,.38);
+    }
+
+    /* Responsive: stack on small screens */
+    @media (max-width: 720px) {
+      .nody-modal {
+        grid-template-columns: 1fr;
+        height: min(720px, 100%);
+      }
+      .nody-modal__left {
+        border-right: none;
+        border-bottom: 1px solid var(--border);
+        height: 220px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <button class="demo-open" id="demoOpen">Open Nody Modal</button>
+
+  <!-- Modal -->
+  <div class="nody-modal-backdrop" id="nodyBackdrop" aria-hidden="true">
+    <div class="nody-modal" role="dialog" aria-modal="true" aria-label="Nody node info modal">
+      <!-- Left: image -->
+      <div class="nody-modal__left">
+        <!-- keep your original random image -->
+        <img src="https://picsum.photos/800/600" alt="Node preview image" />
+      </div>
+
+      <!-- Right: text + buttons -->
+      <div class="nody-modal__right">
+        <div class="nody-modal__topbar">
+          <h2 class="nody-modal__title" id="nodeName">KSampler</h2>
+          <button class="nody-modal__close" id="nodyClose" aria-label="Close">×</button>
+        </div>
+
+        <div class="nody-section">
+          <h3>Short description</h3>
+          <p id="nodeDesc">
+            Samples a latent using your chosen sampler + scheduler settings.
+          </p>
+        </div>
+
+        <div class="nody-section">
+          <h3>Common issues</h3>
+          <ul id="nodeIssues">
+            <li>Wrong input type connected (latent vs image).</li>
+            <li>Steps too low / CFG too high causing artifacts.</li>
+            <li>Seed behavior unexpected when batching.</li>
+          </ul>
+        </div>
+
+        <div class="nody-modal__actions">
+          <button class="nody-btn" id="btnSource">Source</button>
+          <button class="nody-btn nody-btn--primary" id="btnAdd">Add to workflow</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const backdrop = document.getElementById("nodyBackdrop");
+    const openBtn = document.getElementById("demoOpen");
+    const closeBtn = document.getElementById("nodyClose");
+
+    function openModal() {
+      backdrop.dataset.open = "true";
+      backdrop.setAttribute("aria-hidden", "false");
+    }
+
+    function closeModal() {
+      delete backdrop.dataset.open;
+      backdrop.setAttribute("aria-hidden", "true");
+    }
+
+    // Demo open
+    openBtn.addEventListener("click", openModal);
+
+    // Close button
+    closeBtn.addEventListener("click", closeModal);
+
+    // Click outside modal closes
+    backdrop.addEventListener("click", (e) => {
+      if (e.target === backdrop) closeModal();
+    });
+
+    // ESC closes
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeModal();
+    });
+
+    // Buttons don't do anything yet (just placeholders)
+    document.getElementById("btnSource").addEventListener("click", () => {
+      console.log("[NODY modal] Source clicked");
+    });
+    document.getElementById("btnAdd").addEventListener("click", () => {
+      console.log("[NODY modal] Add to workflow clicked");
+    });
+  </script>
+</body>
+</html>
